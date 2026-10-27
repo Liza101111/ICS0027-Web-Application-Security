@@ -21,3 +21,20 @@ class RegistrationForm(FlaskForm):
     )
 
     submit = SubmitField("Register")
+
+class LoginForm(FlaskForm):
+    username = StringField(
+        "Username",
+        validators=[DataRequired()]
+    )
+
+    password = PasswordField(
+        "Password",
+        validators=[DataRequired()]
+    )
+
+    submit = SubmitField("Login")
+
+
+class LogoutForm(FlaskForm):
+    submit = SubmitField("Logout")
