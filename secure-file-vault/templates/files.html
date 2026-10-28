@@ -20,8 +20,17 @@
             {% for file in files %}
                 <li>
                     {{ file.original_filename }}
-                    -
+                    
                     <a href="{{ url_for('download', file_id=file.id) }}">Download</a>
+                    <form
+
+                        method="POST"
+                        action="{{ url_for('delete_file', file_id=file.id) }}"
+                        style="display:inline;"
+                    >
+                        {{ delete_form.hidden_tag() }}
+                        {{ delete_form.submit() }}
+                    </form>
                 </li>
             {% endfor %}
         </ul>

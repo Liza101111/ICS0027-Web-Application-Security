@@ -47,3 +47,6 @@ class UploadForm(FlaskForm):
     )
 
     submit = SubmitField("Upload")
+
+class DeleteForm(FlaskForm):
+    submit = SubmitField("Delete")

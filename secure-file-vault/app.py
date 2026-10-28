@@ -8,16 +8,11 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, session, url_for, send_file
-from flask_login import (
-    LoginManager,
-    current_user,
-    login_required,
-    login_user,
-    logout_user,
-)
+from flask_login import LoginManager, current_user, login_required, login_user, logout_user
+
 from werkzeug.utils import secure_filename
 
-from forms import LoginForm, LogoutForm, RegistrationForm, UploadForm
+from forms import LoginForm, LogoutForm, RegistrationForm, UploadForm, DeleteForm
 from models import User, db, StoredFile
 from crypto import encrypt_file, decrypt_file
 
@@ -129,7 +124,13 @@ def logout():
 @login_required
 def files():
     user_files = current_user.files
-    return render_template("files.html", files=user_files)
+    delete_form = DeleteForm()
+
+    return render_template(
+        "files.html",
+        files=user_files,
+        delete_form=delete_form
+    )
 
 @app.route("/upload", methods=["GET", "POST"])
 @login_required
@@ -199,6 +200,30 @@ def download(file_id):
         as_attachment=True,
         download_name=stored_file.original_filename
     )
+
+@app.route("/delete/<int:file_id>", methods=["POST"])
+@login_required
+def delete_file(file_id):
+    form = DeleteForm()
+
+    if form.validate_on_submit():
+        stored_file = StoredFile.query.filter_by(
+            id=file_id,
+            owner_id=current_user.id
+        ).first_or_404()
+
+        storage_folder = Path(app.root_path) / "storage"
+        file_path = storage_folder / stored_file.stored_filename
+
+        if file_path.exists():
+            file_path.unlink()
+
+        db.session.delete(stored_file)
+        db.session.commit()
+
+        flash("File deleted successfully.")
+
+    return redirect(url_for("files"))
 
 if __name__ == '__main__':
     app.run(debug=True)
