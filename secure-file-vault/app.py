@@ -2,11 +2,12 @@ import os
 from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
+from io import BytesIO
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from dotenv import load_dotenv
-from flask import Flask, flash, redirect, render_template, session, url_for
+from flask import Flask, flash, redirect, render_template, session, url_for, send_file
 from flask_login import (
     LoginManager,
     current_user,
@@ -18,7 +19,7 @@ from werkzeug.utils import secure_filename
 
 from forms import LoginForm, LogoutForm, RegistrationForm, UploadForm
 from models import User, db, StoredFile
-from crypto import encrypt_file
+from crypto import encrypt_file, decrypt_file
 
 load_dotenv()
 
@@ -173,6 +174,31 @@ def upload():
         return redirect(url_for("files"))
 
     return render_template("upload.html", form=form)
+
+@app.route("/download/<int:file_id>")
+@login_required
+def download(file_id):
+    stored_file = StoredFile.query.filter_by(
+        id=file_id,
+        owner_id=current_user.id
+    ).first_or_404()
+
+    storage_folder = Path(app.root_path) / "storage"
+    file_path = storage_folder / stored_file.stored_filename
+
+    with open(file_path, "rb") as encrypted_file:
+        encrypted_data = encrypted_file.read()
+
+    decrypted_data = decrypt_file(
+        encrypted_data,
+        stored_file.nonce
+    )
+
+    return send_file(
+        BytesIO(decrypted_data),
+        as_attachment=True,
+        download_name=stored_file.original_filename
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)

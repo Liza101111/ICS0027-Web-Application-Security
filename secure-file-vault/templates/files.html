@@ -18,7 +18,11 @@
     {% if files %}
         <ul>
             {% for file in files %}
-                <li>{{ file.original_filename }}</li>
+                <li>
+                    {{ file.original_filename }}
+                    -
+                    <a href="{{ url_for('download', file_id=file.id) }}">Download</a>
+                </li>
             {% endfor %}
         </ul>
     {% else %}

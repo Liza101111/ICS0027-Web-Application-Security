@@ -31,3 +31,16 @@ def encrypt_file(file_data):
     )
 
     return encrypted_data, nonce
+
+def decrypt_file(encrypted_data, nonce):
+    key = get_encryption_key()
+
+    aesgcm = AESGCM(key)
+
+    decrypted_data = aesgcm.decrypt(
+        nonce,
+        encrypted_data,
+        None
+    )
+
+    return decrypted_data
