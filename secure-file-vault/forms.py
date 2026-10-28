@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import PasswordField, StringField, SubmitField
 from wtforms.validators import DataRequired, Length
+from flask_wtf.file import FileField
 
 
 class RegistrationForm(FlaskForm):
@@ -38,3 +39,11 @@ class LoginForm(FlaskForm):
 
 class LogoutForm(FlaskForm):
     submit = SubmitField("Logout")
+
+class UploadForm(FlaskForm):
+    file = FileField(
+        "Choose file",
+        validators=[DataRequired()]
+    )
+
+    submit = SubmitField("Upload")

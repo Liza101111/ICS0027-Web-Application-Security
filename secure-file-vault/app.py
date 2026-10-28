@@ -1,5 +1,7 @@
 import os
 from datetime import timedelta
+from pathlib import Path
+from uuid import uuid4
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
@@ -12,9 +14,11 @@ from flask_login import (
     login_user,
     logout_user,
 )
+from werkzeug.utils import secure_filename
 
-from forms import LoginForm, LogoutForm, RegistrationForm
-from models import User, db
+from forms import LoginForm, LogoutForm, RegistrationForm, UploadForm
+from models import User, db, StoredFile
+from crypto import encrypt_file
 
 load_dotenv()
 
@@ -28,6 +32,7 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = False
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
 db.init_app(app)
 
@@ -124,6 +129,50 @@ def logout():
 def files():
     user_files = current_user.files
     return render_template("files.html", files=user_files)
+
+@app.route("/upload", methods=["GET", "POST"])
+@login_required
+def upload():
+    form = UploadForm()
+
+    if form.validate_on_submit():
+        uploaded_file = form.file.data
+
+        original_filename = secure_filename(uploaded_file.filename)
+
+        if not original_filename:
+            flash("Please select a valid file.")
+            return render_template("upload.html", form=form)
+
+        file_data = uploaded_file.read()
+
+        encrypted_data, nonce = encrypt_file(file_data)
+
+        stored_filename = f"{uuid4().hex}.bin"
+
+        storage_folder = Path(app.root_path) / "storage"
+        storage_folder.mkdir(exist_ok=True)
+
+        file_path = storage_folder / stored_filename
+
+        with open(file_path, "wb") as encrypted_file:
+            encrypted_file.write(encrypted_data)
+
+        stored_file = StoredFile(
+            original_filename=original_filename,
+            stored_filename=stored_filename,
+            nonce=nonce,
+            owner_id=current_user.id
+        )
+
+        db.session.add(stored_file)
+        db.session.commit()
+
+        flash("File uploaded and encrypted successfully.")
+
+        return redirect(url_for("files"))
+
+    return render_template("upload.html", form=form)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -11,6 +11,10 @@
 
     <p>Welcome, {{ current_user.username }}</p>
 
+    <p>
+        <a href="{{ url_for('upload') }}">Upload File</a>
+    </p>
+
     {% if files %}
         <ul>
             {% for file in files %}

@@ -8,3 +8,7 @@ __pycache__/
 # SQLite database
 *.db
 instance/
+
+# Uploaded / encrypted files
+storage/*
+!storage/.gitkeep
