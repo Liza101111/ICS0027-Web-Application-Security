@@ -9,6 +9,7 @@ from argon2.exceptions import VerifyMismatchError
 from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, session, url_for, send_file
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
+from flask_wtf.csrf import CSRFProtect
 
 from werkzeug.utils import secure_filename
 
@@ -23,6 +24,8 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///secure_file_vault.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+csrf = CSRFProtect(app) 
 
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
