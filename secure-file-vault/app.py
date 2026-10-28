@@ -119,5 +119,11 @@ def logout():
 
     return redirect(url_for("home"))
 
+@app.route("/files")
+@login_required
+def files():
+    user_files = current_user.files
+    return render_template("files.html", files=user_files)
+
 if __name__ == '__main__':
     app.run(debug=True)
