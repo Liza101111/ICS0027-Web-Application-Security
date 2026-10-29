@@ -29,7 +29,7 @@ csrf = CSRFProtect(app)
 
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = False
+app.config["SESSION_COOKIE_SECURE"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
@@ -229,4 +229,7 @@ def delete_file(file_id):
     return redirect(url_for("files"))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(
+        debug=True,
+        ssl_context="adhoc"
+    )
