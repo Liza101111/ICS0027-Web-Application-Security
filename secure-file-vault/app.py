@@ -33,6 +33,14 @@ app.config["SESSION_COOKIE_SECURE"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
+ALLOWED_EXTENSIONS = {
+    "txt",
+    "pdf",
+    "png",
+    "jpg",
+    "jpeg"
+}
+
 db.init_app(app)
 
 password_hasher = PasswordHasher()
@@ -44,6 +52,12 @@ login_manager.login_view = "login"
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+def allowed_file(filename):
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+    )
 
 @app.route('/')
 def home():
@@ -149,7 +163,19 @@ def upload():
             flash("Please select a valid file.")
             return render_template("upload.html", form=form)
 
+        if not allowed_file(original_filename):
+            flash(
+                "File type not allowed. "
+                "Allowed types: txt, pdf, png, jpg, jpeg."
+            )
+            return render_template("upload.html", form=form)
+
         file_data = uploaded_file.read()
+
+        if not file_data:
+            flash("Empty files cannot be uploaded.")
+            return render_template("upload.html", form=form)
+
 
         encrypted_data, nonce = encrypt_file(file_data)
 
