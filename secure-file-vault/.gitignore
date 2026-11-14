@@ -12,3 +12,7 @@ instance/
 # Uploaded / encrypted files
 storage/*
 !storage/.gitkeep
+
+# Security logs
+logs/*.log
+!logs/.gitkeep

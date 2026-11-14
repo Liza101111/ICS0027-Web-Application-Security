@@ -7,15 +7,16 @@ from io import BytesIO
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from dotenv import load_dotenv
-from flask import Flask, flash, redirect, render_template, session, url_for, send_file
+from flask import Flask, flash, redirect, render_template, session, url_for, send_file, abort
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFError, CSRFProtect
 
 from werkzeug.utils import secure_filename
 
 from forms import LoginForm, LogoutForm, RegistrationForm, UploadForm, DeleteForm
 from models import User, db, StoredFile
 from crypto import encrypt_file, decrypt_file
+from security_logging import log_security_event
 
 load_dotenv()
 
@@ -134,12 +135,22 @@ def login():
                 login_user(user)
                 session.permanent = True
 
+                log_security_event(
+                    "login",
+                    "success",
+                    user_id=user.id
+                )
+
                 flash("Login successful.")
                 return redirect(url_for("home"))
 
             except VerifyMismatchError:
                 pass
 
+        log_security_event(
+            "login",
+            "failure",
+        )
         flash("Invalid username or password.")
 
     return render_template("login.html", form=form)
@@ -150,8 +161,16 @@ def logout():
     form = LogoutForm()
 
     if form.validate_on_submit():
+        user_id = current_user.id
+
         logout_user()
         session.clear()
+        log_security_event(
+            "logout",
+            "success",
+            user_id=user_id
+        )
+
         flash("You have been logged out.")
 
     return redirect(url_for("home"))
@@ -218,6 +237,14 @@ def upload():
         db.session.add(stored_file)
         db.session.commit()
 
+        log_security_event(
+            "file_upload",
+            "success",
+            details={
+                "file_id": stored_file.id
+            }
+        )
+
         flash("File uploaded and encrypted successfully.")
 
         return redirect(url_for("files"))
@@ -230,8 +257,18 @@ def download(file_id):
     stored_file = StoredFile.query.filter_by(
         id=file_id,
         owner_id=current_user.id
-    ).first_or_404()
+    ).first()
 
+    if stored_file is None:
+        log_security_event(
+            "file_download",
+            "denied",
+            details={
+                "requested_file_id": file_id
+            }
+        )
+
+        abort(404)
     storage_folder = Path(app.root_path) / "storage"
     file_path = storage_folder / stored_file.stored_filename
 
@@ -241,6 +278,14 @@ def download(file_id):
     decrypted_data = decrypt_file(
         encrypted_data,
         stored_file.nonce
+    )
+
+    log_security_event(
+        "file_download",
+        "success",
+        details={
+            "file_id": stored_file.id
+        }
     )
 
     return send_file(
@@ -258,7 +303,18 @@ def delete_file(file_id):
         stored_file = StoredFile.query.filter_by(
             id=file_id,
             owner_id=current_user.id
-        ).first_or_404()
+        ).first()
+
+        if stored_file is None:
+            log_security_event(
+                "file_delete",
+                "denied",
+                details={
+                    "requested_file_id": file_id
+                }
+            )
+
+            abort(404)
 
         storage_folder = Path(app.root_path) / "storage"
         file_path = storage_folder / stored_file.stored_filename
@@ -269,9 +325,33 @@ def delete_file(file_id):
         db.session.delete(stored_file)
         db.session.commit()
 
+        log_security_event(
+            "file_delete",
+            "success",
+            details={
+                "file_id": stored_file.id
+            }
+        )
+
         flash("File deleted successfully.")
 
     return redirect(url_for("files"))
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(error):
+    log_security_event(
+        "csrf_validation",
+        "rejected",
+        details={
+            "reason": error.description
+        }
+    )
+
+    return render_template(
+        "error.html",
+        error_code=400,
+        message="The request could not be processed."
+    ), 400
 
 @app.errorhandler(400)
 def bad_request(error):
