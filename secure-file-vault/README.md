@@ -18,6 +18,11 @@ The current application supports:
 - File deletion
 - File ownership checks
 - HTTPS/TLS in the development setup
+- File type validation and 10 MB upload limit
+- XSS defenses and HTTP security headers
+- Custom secure error handling
+- Structured security logging
+- Security testing for CSRF, SQL injection, XSS, IDOR, upload validation, and error handling
 
 Files are encrypted before they are written to `storage/`.
 
@@ -43,6 +48,7 @@ secure-file-vault/
 ├── models.py
 ├── forms.py
 ├── crypto.py
+├── security_logging.py
 ├── init_db.py
 ├── requirements.txt
 ├── README.md
@@ -54,7 +60,11 @@ secure-file-vault/
 │   ├── register.html
 │   ├── login.html
 │   ├── files.html
-│   └── upload.html
+│   ├── upload.html
+│   └── error.html
+│
+├── logs/
+│   └── .gitkeep
 │
 ├── storage/
 │   └── .gitkeep
@@ -62,7 +72,9 @@ secure-file-vault/
 └── docs/
     ├── architecture.png
     ├── design.md
-    └── progress.md
+    ├── progress.md
+    ├── security-tests.md
+    └── report-draft.md
 ```
 
 ## Local Setup
@@ -178,7 +190,36 @@ For local development, choose **Advanced** and continue to `127.0.0.1`.
 - Session cookies use `HttpOnly`, `Secure`, and `SameSite=Lax`.
 - Sessions expire after approximately 30 minutes of inactivity.
 - File uploads are limited to 10 MB.
+- Allowed upload extensions are `.txt`, `.pdf`, `.png`, `.jpg`, and `.jpeg`.
+- Empty files and unsupported file types are rejected.
+- Jinja auto-escaping and Content Security Policy are used as XSS defenses.
+- Security headers include `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, and `Referrer-Policy`.
+- Custom handlers provide generic responses for 400, 404, 413, and 500 errors.
+- Security events are written as structured JSON to `logs/security.log`.
+- Real security logs are excluded from Git.
+- SQLAlchemy ORM is used instead of string-concatenated SQL.
 - The application is served over HTTPS during development.
+- Flask debug mode is disabled in the current security-testing configuration.
+
+## Security Testing
+
+Checkpoint 3 testing includes:
+
+- Allowed and disallowed file upload tests
+- Empty file validation
+- Oversized upload / HTTP 413 test
+- XSS payload tests
+- CSRF request without a token
+- SQL injection payload tests
+- Cross-user download and delete (IDOR) tests
+- Secure 404 and 413 error handling tests
+- Structured security logging verification
+
+Detailed results are available in:
+
+```text
+docs/security-tests.md
+```
 
 ## Checkpoint Documentation
 
@@ -198,4 +239,16 @@ Checkpoint 2 progress note:
 
 ```text
 docs/progress.md
+```
+
+Checkpoint 3 security test results:
+
+```text
+docs/security-tests.md
+```
+
+Checkpoint 3 draft report:
+
+```text
+docs/report-draft.md
 ```
