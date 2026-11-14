@@ -273,8 +273,45 @@ def delete_file(file_id):
 
     return redirect(url_for("files"))
 
+@app.errorhandler(400)
+def bad_request(error):
+    return render_template(
+        "error.html",
+        error_code=400,
+        message="The request could not be processed."
+    ), 400
+
+
+@app.errorhandler(404)
+def not_found(error):
+    return render_template(
+        "error.html",
+        error_code=404,
+        message="The requested resource was not found."
+    ), 404
+
+
+@app.errorhandler(413)
+def file_too_large(error):
+    return render_template(
+        "error.html",
+        error_code=413,
+        message="The uploaded file is too large. Maximum size is 10 MB."
+    ), 413
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+
+    return render_template(
+        "error.html",
+        error_code=500,
+        message="An unexpected error occurred."
+    ), 500
+
 if __name__ == '__main__':
     app.run(
-        debug=True,
+        debug=False,
         ssl_context="adhoc"
     )
